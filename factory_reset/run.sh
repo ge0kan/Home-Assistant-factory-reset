@@ -6,13 +6,12 @@ readonly EXPECTED_CONFIRMATION="ERASE ALL DATA"
 readonly APP_DATA_DIR="${APP_DATA_DIR:-/data}"
 readonly ATTEMPT_MARKER="${APP_DATA_DIR}/wipe-requested"
 
-execute="$(bashio::config 'execute')"
 confirmation="$(bashio::config 'confirmation')"
 
 bashio::log.warning "This app PERMANENTLY erases all Home Assistant OS user data."
 
-if [[ "${execute}" != "true" || "${confirmation}" != "${EXPECTED_CONFIRMATION}" ]]; then
-    bashio::log.info "Safe mode: wipe NOT requested. Configure execute=true AND confirmation=ERASE ALL DATA, save, then manually start again."
+if [[ "${confirmation}" != "${EXPECTED_CONFIRMATION}" ]]; then
+    bashio::log.info "Safe mode: wipe NOT requested. Enter exactly ERASE ALL DATA in the confirmation field, save, then manually start the app."
     exit 0
 fi
 
@@ -41,14 +40,7 @@ if ! printf '%s' "${os_info}" | jq --exit-status '.result == "ok" and (.data.ver
 fi
 
 os_version="$(printf '%s' "${os_info}" | jq --raw-output '.data.version')"
-os_board="$(printf '%s' "${os_info}" | jq --raw-output '.data.board // "unknown"')"
-bashio::log.info "HAOS version: ${os_version}; board: ${os_board}."
-
-# Refuse to wipe any other board, even if the app was installed manually.
-if [[ "${os_board}" != "rpi4-64" ]]; then
-    bashio::log.error "Unexpected HAOS board '${os_board}' (expected rpi4-64). Refusing to wipe."
-    exit 1
-fi
+bashio::log.info "Home Assistant OS version: ${os_version}."
 
 # Prevent repeated destructive requests after a container restart or lost response.
 mkdir -p "${APP_DATA_DIR}"
@@ -62,6 +54,6 @@ if response="$(curl --fail --silent --show-error --connect-timeout 5 --max-time 
     bashio::log.warning "Supervisor acknowledged the wipe request. Wait for HAOS to reboot and reinstall Home Assistant."
 else
     bashio::log.error "The connection failed or closed while sending the wipe request."
-    bashio::log.error "The wipe MAY still have started. Check the Raspberry Pi before retrying."
+    bashio::log.error "The wipe MAY still have started. Check the host before retrying."
     exit 1
 fi

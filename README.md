@@ -1,57 +1,43 @@
 # Home Assistant Factory Reset
 
-Одноразовий Home Assistant App для **повного віддаленого скидання Home Assistant OS** на **Raspberry Pi 4 (64-bit)** із SSD. Не потребує підключення монітора, клавіатури чи розбирання корпусу.
+A one-time Home Assistant App for remotely restoring **Home Assistant OS** to a fresh-install state. Works with **supported 64-bit HAOS systems** (ARM64 / x86-64), including Raspberry Pi, mini-PCs and VMs. It does **not** work with Home Assistant Container or Core installations.
 
-> **Увага!** Скидання безповоротно видаляє Home Assistant, налаштування, інтеграції, користувачів, додатки, історію, локальні резервні копії та мережеві налаштування. Home Assistant OS та boot-конфігурація залишаються. Це не фізичне очищення SSD.
+> ⚠️ **Destructive and irreversible.** Deletes HA configuration, users, integrations, apps, history, locally stored backups, media and data-disk network settings. HAOS and boot configuration remain installed. This is **not secure disk sanitization**.
 
-## Встановлення через UI
+## Швидка інструкція українською
 
-1. Перевір, що в **Settings → System → Repairs → ⋮ → System information** тип інсталяції — **Home Assistant OS**, а архітектура — **aarch64**. Стара 32-бітна HAOS не підтримується.
-2. Відкрий **Settings → Apps → Install app → ⋮ → Repositories** (в окремих версіях це **Settings → Add-ons → Add-on Store → ⋮ → Repositories**).
-3. Додай URL **https://github.com/ge0kan/Home-Assistant-factory-reset**.
-4. Знайди **Factory Reset (destructive)** та натисни **Install**. App збирається з відкритого коду на самій Raspberry Pi; потрібен доступ до інтернету.
+1. У Home Assistant відкрий **Settings → Apps → Install app → ⋮ → Repositories** (у старішому UI: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**).
+2. Додай репозиторій: **https://github.com/ge0kan/Home-Assistant-factory-reset**.
+3. Встанови **Factory Reset (destructive)**. У **Configuration / Параметри** побачиш **одне текстове поле `confirmation`**.
+4. **Безпечний тест:** залиш `NOT ARMED`, натисни **Start**. У **Log / Журнал** має з'явитися `Safe mode: wipe NOT requested.`
+5. **Стерти все:** у полі **`confirmation`** видали старий текст і введи рівно **`ERASE ALL DATA`** (великими літерами, без лапок). **Не вставляй YAML**, `confirmation:` або `execute: true`.
+6. Натисни **Save / Зберегти**, потім **Start / Запустити** **один раз**. Якщо додаток іще працює, спочатку зупини його (**Stop**).
+7. Home Assistant може відразу втратити з'єднання й перезавантажитися. **Не вимикай живлення і не повторюй запуск навмання.** Після відновлення відкрий `http://homeassistant.local:8123` або IP-адресу, видану роутером.
 
-## Спочатку безпечна перевірка
+**Важливо:** `ERASE ALL DATA` + натискання **Start** запускають незворотну операцію. Перемикача `execute` більше немає — він не був системною вимогою. Автозапуск заборонений (`boot: manual_only`).
 
-У вкладці **Configuration** залиш типові значення:
+## Quick start (English)
 
-```yaml
-execute: false
-confirmation: NOT ARMED
-```
+1. In Home Assistant OS, go to **Settings → Apps → Install app → ⋮ → Repositories** (older UI: **Settings → Add-ons → Add-on Store**).
+2. Add **https://github.com/ge0kan/Home-Assistant-factory-reset**, then install **Factory Reset (destructive)**.
+3. On **Configuration**, there is just **one text field: `confirmation`**. To dry-run safely, leave `NOT ARMED` and press **Start**. The log should say `Safe mode: wipe NOT requested.`
+4. To wipe, enter **exactly `ERASE ALL DATA`** in the field (not YAML), press **Save**, then **Start** exactly once.
+5. Do not power off or blindly retry if the UI disconnects. Wait for HAOS to restart and reinstall Home Assistant, then reopen `http://homeassistant.local:8123` or the DHCP IP.
 
-Натисни **Start**. У журналі (**Log**) має з'явитися `Safe mode: wipe NOT requested.` **Жодних даних не буде стерто.**
+## Safeguards and compatibility
 
-## Повне скидання — незворотна дія
+- Restricted to supported Home Assistant OS architectures: **aarch64** and **amd64**. No Raspberry Pi or device-model restriction.
+- Manual start only; a case-sensitive confirmation phrase is required.
+- Supervisor API is checked before wiping, and a one-shot marker prevents repeat requests in the same installation.
+- Uses the official Supervisor `POST /os/datadisk/wipe` endpoint, without direct host-disk access or privileged Docker.
+- Requires internet access to install the App and reinstall Home Assistant components after the wipe. Ethernet with DHCP is recommended.
+- An interrupted API call may still initiate a wipe; never blindly retry.
+- Tested with non-destructive mocks and syntax checks. **A full wipe has not been independently verified across platforms.**
 
-1. У **Configuration** зміни параметри на:
+Full technical notes: [DOCS.md](factory_reset/DOCS.md).
 
-   ```yaml
-   execute: true
-   confirmation: ERASE ALL DATA
-   ```
+### Home Assistant documentation
 
-2. Натисни **Save** → **Start** **один раз**.
-3. App перевірить Supervisor та тип плати (обов'язково **rpi4-64**), виконає офіційний API-виклик `POST /os/datadisk/wipe`.
-4. Raspberry Pi перезавантажиться, повторно завантажить компоненти й покаже початкове налаштування. Відкрий `http://homeassistant.local:8123` або IP від DHCP роутера.
-
-**Після запуску не вимикай живлення.** Втрата HTTP-з'єднання не означає невдачі: скидання могло вже початися. Не запускай операцію повторно наосліп.
-
-## Запобіжники
-
-- `boot: manual_only` — немає автозапуску.
-- Потрібні обидва параметри: `execute=true` та **точний текст** `ERASE ALL DATA`.
-- Фільтр платформи `raspberrypi4-64` і перевірка `rpi4-64` через Supervisor API.
-- Одноразовий файл-маркер блокує повторну спробу після невизначеного результату.
-- Немає привілейованого контейнера, доступу до host Docker чи прямого запису на SSD.
-
-**Стан тестування:** синтаксичні перевірки + 8 автоматизованих безпечних сценаріїв. Реальне скидання фізичного пристрою не тестувалося. Повний опис: [DOCS.md](factory_reset/DOCS.md).
-
-**Важливо для корпусу Argon:** додаткові скрипти управління вентилятором або кнопкою можуть потребувати повторного встановлення після скидання.
-
-### Документація Home Assistant
-
-- [App repository](https://developers.home-assistant.io/docs/apps/repository/)
 - [App configuration](https://developers.home-assistant.io/docs/apps/configuration/)
-- [Supervisor OS API](https://contributors.home-assistant.io/apps/supervisor-api/host/)
-- [OS data wipe](https://www.home-assistant.io/common-tasks/os/)
+- [App repository](https://developers.home-assistant.io/docs/apps/repository/)
+- [App communication and Supervisor API](https://developers.home-assistant.io/docs/apps/communication/)

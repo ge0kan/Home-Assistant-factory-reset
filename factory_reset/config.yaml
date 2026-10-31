@@ -1,12 +1,11 @@
 name: "Factory Reset (destructive)"
-version: "1.0.0"
+version: "1.1.0"
 slug: "factory_reset"
 description: "One-time Home Assistant OS data-disk wipe with explicit confirmation"
 url: "https://github.com/ge0kan/Home-Assistant-factory-reset"
 arch:
   - aarch64
-machine:
-  - raspberrypi4-64
+  - amd64
 init: false
 startup: once
 boot: manual_only
@@ -14,8 +13,6 @@ hassio_api: true
 hassio_role: admin
 stage: experimental
 options:
-  execute: false
   confirmation: "NOT ARMED"
 schema:
-  execute: bool
   confirmation: str
