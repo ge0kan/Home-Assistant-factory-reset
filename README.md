@@ -24,6 +24,12 @@ A one-time Home Assistant App for remotely restoring **Home Assistant OS** to a 
 4. To wipe, enter **exactly `ERASE ALL DATA`** in the field (not YAML), press **Save**, then **Start** exactly once.
 5. Do not power off or blindly retry if the UI disconnects. Wait for HAOS to restart and reinstall Home Assistant, then reopen `http://homeassistant.local:8123` or the DHCP IP.
 
+## Оновлення з v1.0.0 / Upgrading from v1.0.0
+
+Перед першим запуском після оновлення перевір поле `confirmation` і поверни його до `NOT ARMED`. Home Assistant може зберігати старе значення `ERASE ALL DATA` під час оновлення, а перемикач `execute` у v1.1.0 прибрано. **Не запускай додаток із цим текстом, якщо не збираєшся стерти систему.**
+
+Before starting v1.1.0 for the first time, set `confirmation` to `NOT ARMED` if you previously used v1.0.0. Saved configuration values may survive updates even though the `execute` toggle has been removed.
+
 ## Safeguards and compatibility
 
 - Restricted to supported Home Assistant OS architectures: **aarch64** and **amd64**. No Raspberry Pi or device-model restriction.
